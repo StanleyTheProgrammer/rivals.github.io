@@ -38,14 +38,14 @@
     <div id="ui-layer">
         <div id="health-bar-container"><div id="health-bar-fill"></div></div>
         <div id="health-label">HP 100</div>
-        <div id="score-display">🎯 0</div>
+        <div id="score-display">Score: 0</div>
         <div id="crosshair"><div id="crosshair-dot"></div></div>
         <div id="joystick-zone"><div id="joystick-base"></div><div id="joystick-thumb"></div></div>
-        <div id="shoot-button">FIRE</div>
+        <div id="shoot-button">FIRE IN THE HOLE</div>
         <div id="hit-flash"></div>
         <div id="quiz-overlay">
             <div id="quiz-card">
-                <div id="quiz-title">💀 YOU DIED</div>
+                <div id="quiz-title">YOU DIED OMG NOW DO THESE UWU</div>
                 <div id="quiz-subtitle">Answer correctly to respawn</div>
                 <div id="quiz-question"></div>
                 <div id="quiz-answers"></div>
@@ -131,8 +131,8 @@
         // Player
         const player = {
             pos: new THREE.Vector3(0, 1.7, 0),
-            health: 100,
-            maxHealth: 100,
+            health: 250,
+            maxHealth: 250,
             score: 0,
             dead: false,
             yaw: 0,
@@ -504,7 +504,7 @@
             // UI
             healthFill.style.width = (player.health / player.maxHealth * 100) + '%';
             healthLabel.textContent = 'HP ' + Math.round(player.health);
-            scoreDisplay.textContent = '🎯 ' + player.score;
+            scoreDisplay.textContent = 'Score: ' + player.score;
 
             // Spawn NPCs
             if (npcs.filter(n => n.alive).length < 5 && Math.random() < 0.01) {
