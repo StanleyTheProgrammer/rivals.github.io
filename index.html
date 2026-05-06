@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>3D Shooter – Turtle Conservation (Fixed)</title>
+    <title>3D Shooter – Turtle Conservation</title>
     <style>
         * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; }
         body { background:#000; overflow:hidden; touch-action:manipulation; font-family:Arial,sans-serif; position:fixed; width:100vw; height:100dvh; }
@@ -23,12 +23,14 @@
         #joystick-thumb { width:55px; height:55px; border-radius:50%; background:rgba(255,255,255,0.8); position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); box-shadow:0 0 15px black; }
         #shoot-button { position:absolute; bottom:50px; bottom:calc(50px + env(safe-area-inset-bottom,20px)); right:30px; width:90px; height:90px; border-radius:50%; background:radial-gradient(circle at 30% 30%, #ff5555, #aa0000); border:3px solid white; pointer-events:auto; z-index:20; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; font-size:18px; }
         #hit-flash { position:absolute; top:0; left:0; width:100%; height:100%; background:transparent; pointer-events:none; z-index:8; transition: background 0.1s; }
-        #quiz-overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); display:none; align-items:center; justify-content:center; z-index:100; }
+        #quiz-overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); display:none; align-items:center; justify-content:center; z-index:100; pointer-events:auto; }
         #quiz-overlay.active { display:flex; }
-        #quiz-card { background:#1e2a3a; border:2px solid #ff5555; border-radius:20px; padding:30px; max-width:400px; text-align:center; color:white; }
-        #quiz-question { font-size:18px; margin:20px 0; }
-        .quiz-btn { display:block; width:100%; padding:15px; margin:8px 0; background:rgba(255,255,255,0.1); border:1px solid white; border-radius:10px; color:white; font-size:16px; cursor:pointer; }
-        .quiz-btn:active { background:rgba(255,0,0,0.5); }
+        #quiz-card { background:linear-gradient(145deg, #1a1a2e, #16213e); border:3px solid #e94560; border-radius:20px; padding:40px 30px; max-width:500px; width:90%; text-align:center; color:white; box-shadow:0 20px 60px rgba(233,68,96,0.4); }
+        #quiz-title { font-size:28px; font-weight:bold; margin-bottom:10px; color:#ff6b6b; }
+        #quiz-subtitle { font-size:14px; color:#ccc; margin-bottom:25px; }
+        #quiz-question { font-size:20px; margin:20px 0; font-weight:bold; }
+        .quiz-btn { display:block; width:100%; padding:18px; margin:12px 0; background:rgba(255,255,255,0.08); border:2px solid rgba(255,255,255,0.3); border-radius:12px; color:white; font-size:18px; cursor:pointer; transition:all 0.2s; }
+        .quiz-btn:active { background:rgba(233,68,96,0.4); border-color:#e94560; transform:scale(0.98); }
     </style>
 </head>
 <body>
@@ -43,8 +45,8 @@
         <div id="hit-flash"></div>
         <div id="quiz-overlay">
             <div id="quiz-card">
-                <h2>💀 YOU DIED</h2>
-                <p>Answer correctly to respawn</p>
+                <div id="quiz-title">💀 YOU DIED</div>
+                <div id="quiz-subtitle">Answer correctly to respawn</div>
                 <div id="quiz-question"></div>
                 <div id="quiz-answers"></div>
             </div>
@@ -70,7 +72,7 @@
         const quizQuestion = document.getElementById('quiz-question');
         const quizAnswers = document.getElementById('quiz-answers');
 
-        // Three.js basics
+        // Three.js setup
         const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -99,7 +101,7 @@
         ground.receiveShadow = true;
         scene.add(ground);
 
-        // Buildings (with collision data)
+        // Buildings
         const buildings = [];
         function addBuilding(x, z, w, h, d, color) {
             const geo = new THREE.BoxGeometry(w, h, d);
@@ -126,7 +128,7 @@
         ];
         buildingData.forEach(d => addBuilding(...d));
 
-        // Player state
+        // Player
         const player = {
             pos: new THREE.Vector3(0, 1.7, 0),
             health: 100,
@@ -171,7 +173,7 @@
                 health: 3,
                 alive: true,
                 shootTimer: 1 + Math.random() * 2,
-                shootDelay: 1.2,
+                shootDelay: 1.5,
                 speed: 2.2,
             });
         }
@@ -209,33 +211,9 @@
             const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
             const origin = player.pos.clone().add(dir.clone().multiplyScalar(0.6));
             createBullet(origin, dir, 35, '#ffdd44', 'player');
-            // simple audio feedback
-            try { const ctx = new AudioContext(); const o = ctx.createOscillator(); o.frequency.value = 600; o.connect(ctx.destination); o.start(); o.stop(ctx.currentTime + 0.05); } catch (e) { }
         }
 
-        // ---------- COLLISION HELPERS ----------
-        function checkBuildingCollision(pos, radius) {
-            for (const b of buildings) {
-                const d = b.userData;
-                // AABB collision
-                const halfW = d.w / 2;
-                const halfD = d.d / 2;
-                const minX = d.x - halfW;
-                const maxX = d.x + halfW;
-                const minZ = d.z - halfD;
-                const maxZ = d.z + halfD;
-                const closestX = Math.max(minX, Math.min(pos.x, maxX));
-                const closestZ = Math.max(minZ, Math.min(pos.z, maxZ));
-                const dx = pos.x - closestX;
-                const dz = pos.z - closestZ;
-                const dist = Math.sqrt(dx * dx + dz * dz);
-                if (dist < radius && pos.y < d.h + 0.5) {
-                    return true;
-                }
-            }
-            return false;
-        }
-
+        // Collision helpers
         function resolveCollision(pos, radius) {
             for (const b of buildings) {
                 const d = b.userData;
@@ -258,170 +236,78 @@
             }
         }
 
-        // ---------- GAME LOOP ----------
-        const clock = new THREE.Clock();
+        // NPC shooting - AIM AT PLAYER HEAD (y=1.7)
+        function npcShoot(npc) {
+            const origin = npc.mesh.position.clone();
+            origin.y += 1.5; // shoulder height
 
-        function update(dt) {
-            if (player.dead) return;
+            // AIM AT PLAYER'S ACTUAL POSITION (head level)
+            const target = player.pos.clone();
+            
+            let dir = target.sub(origin).normalize();
 
-            // Player movement
-            let mx = 0, mz = 0;
-            // joystick input (set by event listeners)
-            if (typeof joyMoveX !== 'undefined') { mx = joyMoveX; mz = joyMoveY; }
-            // keyboard fallback
-            if (keys['w'] || keys['arrowup']) mz = -1;
-            if (keys['s'] || keys['arrowdown']) mz = 1;
-            if (keys['a'] || keys['arrowleft']) mx = -1;
-            if (keys['d'] || keys['arrowright']) mx = 1;
-            const mag = Math.sqrt(mx * mx + mz * mz);
-            if (mag > 1) { mx /= mag; mz /= mag; }
+            // Small inaccuracy
+            dir.x += (Math.random() - 0.5) * 0.15;
+            dir.y += (Math.random() - 0.5) * 0.15;
+            dir.z += (Math.random() - 0.5) * 0.15;
+            dir.normalize();
 
-            const forward = new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
-            const right = new THREE.Vector3(Math.cos(player.yaw), 0, -Math.sin(player.yaw));
-            const moveVec = forward.multiplyScalar(-mz).add(right.multiplyScalar(mx));
-            if (moveVec.lengthSq() > 0) {
-                moveVec.normalize().multiplyScalar(player.moveSpeed * dt);
-                const newPos = player.pos.clone().add(moveVec);
-                resolveCollision(newPos, player.radius);
-                player.pos.copy(newPos);
-            }
-            player.pos.y = 1.7;
-            camera.position.copy(player.pos);
-            camera.rotation.order = 'YXZ';
-            camera.rotation.y = player.yaw;
-            camera.rotation.x = player.pitch;
-
-            // Player cooldown
-            if (player.shootCooldown > 0) player.shootCooldown -= dt;
-
-            // NPC AI
-            for (const npc of npcs) {
-                if (!npc.alive) continue;
-                const toPlayer = new THREE.Vector3().copy(player.pos).sub(npc.mesh.position);
-                const dist = toPlayer.length();
-                if (dist < 18 && dist > 1.2) {
-                    const move = toPlayer.normalize().multiplyScalar(npc.speed * dt);
-                    const newNpcPos = npc.mesh.position.clone().add(move);
-                    // simple building resolution for NPCs
-                    resolveCollision(newNpcPos, 0.45);
-                    npc.mesh.position.copy(newNpcPos);
-                    npc.mesh.lookAt(player.pos.x, 0, player.pos.z);
-                }
-                if (dist < 14) {
-                    npc.shootTimer -= dt;
-                    if (npc.shootTimer <= 0) {
-                        npc.shootTimer = npc.shootDelay;
-                        const dir = toPlayer.clone().normalize().add(
-                            new THREE.Vector3((Math.random() - 0.5) * 0.3, (Math.random() - 0.5) * 0.2, (Math.random() - 0.5) * 0.3)
-                        ).normalize();
-                        const origin = npc.mesh.position.clone().add(new THREE.Vector3(0, 1.5, 0));
-                        createBullet(origin, dir, 18, '#ff4444', 'npc');
-                    }
-                }
-            }
-
-            // Update bullets
-            const allBullets = [...playerBullets, ...npcBullets];
-            for (const bullet of allBullets) {
-                bullet.position.add(bullet.userData.vel.clone().multiplyScalar(dt));
-                bullet.userData.life -= dt;
-            }
-
-            // Bullet‑NPC collision (player bullets)
-            for (let i = playerBullets.length - 1; i >= 0; i--) {
-                const b = playerBullets[i];
-                let hit = false;
-                for (const npc of npcs) {
-                    if (!npc.alive) continue;
-                    if (b.position.distanceTo(npc.mesh.position) < 0.9) {
-                        npc.health--;
-                        scene.remove(b);
-                        playerBullets.splice(i, 1);
-                        if (npc.health <= 0) {
-                            npc.alive = false;
-                            scene.remove(npc.mesh);
-                            player.score += 10;
-                        }
-                        hit = true;
-                        break;
-                    }
-                }
-                if (hit) continue;
-                // remove if expired or out of bounds
-                if (b.userData.life <= 0 || Math.abs(b.position.x) > 35 || Math.abs(b.position.z) > 35 || b.position.y < -2 || b.position.y > 20) {
-                    scene.remove(b);
-                    playerBullets.splice(i, 1);
-                }
-            }
-
-            // Bullet‑player collision (NPC bullets)
-            for (let i = npcBullets.length - 1; i >= 0; i--) {
-                const b = npcBullets[i];
-                if (!player.dead && b.position.distanceTo(player.pos) < 0.6) {
-                    const dmg = 12 + Math.floor(Math.random() * 15);
-                    player.health = Math.max(0, player.health - dmg);
-                    hitFlash.style.background = 'rgba(255,0,0,0.4)';
-                    setTimeout(() => hitFlash.style.background = 'transparent', 150);
-                    scene.remove(b);
-                    npcBullets.splice(i, 1);
-                    if (player.health <= 0) {
-                        player.dead = true;
-                        showQuiz();
-                    }
-                    continue;
-                }
-                // remove expired NPC bullets
-                if (b.userData.life <= 0 || Math.abs(b.position.x) > 35 || Math.abs(b.position.z) > 35 || b.position.y < -2 || b.position.y > 20) {
-                    scene.remove(b);
-                    npcBullets.splice(i, 1);
-                }
-            }
-
-            // UI update
-            const healthPercent = (player.health / player.maxHealth) * 100;
-            healthFill.style.width = healthPercent + '%';
-            healthLabel.textContent = 'HP ' + Math.round(player.health);
-            scoreDisplay.textContent = '🎯 ' + player.score;
-
-            // Respawn NPCs occasionally
-            if (npcs.filter(n => n.alive).length < 5 && Math.random() < 0.01) {
-                const angle = Math.random() * Math.PI * 2;
-                spawnNPC(Math.cos(angle) * 20, Math.sin(angle) * 20);
-            }
+            createBullet(origin, dir, 20, '#ff4444', 'npc');
         }
 
-        // Turtle quiz
+        // QUIZ SYSTEM - The turtle conservation questions
         const questions = [
-            { q: "What does our design do?", a: ["A. Make more male turtles", "B. Balance the ratio of male and female turtles"], correct: 1 },
-            { q: "Do we need more female or male turtles?", a: ["A. Female", "B. Male"], correct: 1 },
-            { q: "Climate change is causing more of which gender?", a: ["A. Female turtles (warmer sand)", "B. Male turtles (cooler sand)"], correct: 0 },
+            {
+                q: "What does our design do?",
+                a: ["A. Make more male turtles", "B. Balance the ratio of male and female turtles"],
+                correct: 1
+            },
+            {
+                q: "Do we need more female or male turtles?",
+                a: ["A. Female", "B. Male"],
+                correct: 1
+            },
+            {
+                q: "Climate change is causing more of which gender?",
+                a: ["A. Female turtles (warmer sand)", "B. Male turtles (cooler sand)"],
+                correct: 0
+            }
         ];
 
         function showQuiz() {
             quizOverlay.classList.add('active');
+            
+            // Pick random question
             const q = questions[Math.floor(Math.random() * questions.length)];
             quizQuestion.textContent = q.q;
             quizAnswers.innerHTML = '';
+            
             q.a.forEach((ans, i) => {
                 const btn = document.createElement('button');
                 btn.className = 'quiz-btn';
                 btn.textContent = ans;
                 btn.addEventListener('click', () => {
                     if (i === q.correct) {
+                        // CORRECT - Respawn player
                         player.health = player.maxHealth;
                         player.dead = false;
                         player.pos.set(0, 1.7, 0);
                         quizOverlay.classList.remove('active');
                     } else {
-                        btn.style.background = '#ff0000';
-                        setTimeout(() => btn.style.background = '', 300);
+                        // WRONG - Flash red, stay dead
+                        btn.style.background = 'rgba(255,0,0,0.6)';
+                        btn.style.borderColor = '#ff0000';
+                        setTimeout(() => {
+                            btn.style.background = 'rgba(255,255,255,0.08)';
+                            btn.style.borderColor = 'rgba(255,255,255,0.3)';
+                        }, 500);
                     }
                 });
                 quizAnswers.appendChild(btn);
             });
         }
 
-        // ---------- CONTROLS (touch & keyboard) ----------
+        // Controls
         let joyMoveX = 0, joyMoveY = 0;
         let joyActive = false, joyId = null, joyBase = { x: 0, y: 0 };
         joystickZone.addEventListener('touchstart', (e) => {
@@ -441,8 +327,7 @@
                     let dy = t.clientY - joyBase.y;
                     const dist = Math.sqrt(dx * dx + dy * dy);
                     const max = 50;
-                    if (dist > max) { dx = (dx / dist) * max;
-                        dy = (dy / dist) * max; }
+                    if (dist > max) { dx = (dx / dist) * max; dy = (dy / dist) * max; }
                     joyMoveX = dx / max;
                     joyMoveY = dy / max;
                     joystickThumb.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
@@ -461,11 +346,8 @@
             }
         });
 
-        // Shoot button
-        shootBtn.addEventListener('touchstart', (e) => { playerShoot();
-            e.preventDefault(); });
+        shootBtn.addEventListener('touchstart', (e) => { playerShoot(); e.preventDefault(); });
 
-        // Camera look (drag right half)
         let lookActive = false, lookId = null, prevLook = { x: 0, y: 0 };
         document.addEventListener('touchstart', (e) => {
             for (const t of e.changedTouches) {
@@ -502,10 +384,135 @@
         const keys = {};
         window.addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; e.preventDefault(); });
         window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; e.preventDefault(); });
-        // mouse shooting
         window.addEventListener('mousedown', e => { if (e.button === 0) playerShoot(); });
 
-        // ---------- RENDER LOOP ----------
+        // Game loop
+        const clock = new THREE.Clock();
+        function update(dt) {
+            if (player.dead) return;
+
+            // Movement
+            let mx = joyMoveX, mz = joyMoveY;
+            if (keys['w'] || keys['arrowup']) mz = -1;
+            if (keys['s'] || keys['arrowdown']) mz = 1;
+            if (keys['a'] || keys['arrowleft']) mx = -1;
+            if (keys['d'] || keys['arrowright']) mx = 1;
+            const mag = Math.sqrt(mx * mx + mz * mz);
+            if (mag > 1) { mx /= mag; mz /= mag; }
+
+            const forward = new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
+            const right = new THREE.Vector3(Math.cos(player.yaw), 0, -Math.sin(player.yaw));
+            const moveVec = forward.multiplyScalar(-mz).add(right.multiplyScalar(mx));
+            if (moveVec.lengthSq() > 0) {
+                moveVec.normalize().multiplyScalar(player.moveSpeed * dt);
+                const newPos = player.pos.clone().add(moveVec);
+                resolveCollision(newPos, player.radius);
+                player.pos.copy(newPos);
+            }
+            player.pos.y = 1.7;
+            camera.position.copy(player.pos);
+            camera.rotation.order = 'YXZ';
+            camera.rotation.y = player.yaw;
+            camera.rotation.x = player.pitch;
+
+            if (player.shootCooldown > 0) player.shootCooldown -= dt;
+
+            // NPC AI
+            for (const npc of npcs) {
+                if (!npc.alive) continue;
+                const toPlayer = new THREE.Vector3().copy(player.pos).sub(npc.mesh.position);
+                const dist = toPlayer.length();
+
+                if (dist < 18 && dist > 1.2) {
+                    const moveDir = toPlayer.clone();
+                    moveDir.y = 0;
+                    if (moveDir.lengthSq() > 0.001) {
+                        moveDir.normalize();
+                        const move = moveDir.multiplyScalar(npc.speed * dt);
+                        const newNpcPos = npc.mesh.position.clone().add(move);
+                        resolveCollision(newNpcPos, 0.45);
+                        npc.mesh.position.copy(newNpcPos);
+                    }
+                    npc.mesh.lookAt(player.pos.x, 0, player.pos.z);
+                }
+
+                if (dist < 14) {
+                    npc.shootTimer -= dt;
+                    if (npc.shootTimer <= 0) {
+                        npc.shootTimer = npc.shootDelay;
+                        npcShoot(npc);
+                    }
+                }
+            }
+
+            // Update bullets
+            for (const arr of [playerBullets, npcBullets]) {
+                for (const b of arr) {
+                    b.position.add(b.userData.vel.clone().multiplyScalar(dt));
+                    b.userData.life -= dt;
+                }
+            }
+
+            // Player bullet hits NPCs
+            for (let i = playerBullets.length - 1; i >= 0; i--) {
+                const b = playerBullets[i];
+                let hit = false;
+                for (const npc of npcs) {
+                    if (!npc.alive) continue;
+                    if (b.position.distanceTo(npc.mesh.position) < 0.9) {
+                        npc.health--;
+                        scene.remove(b);
+                        playerBullets.splice(i, 1);
+                        if (npc.health <= 0) {
+                            npc.alive = false;
+                            scene.remove(npc.mesh);
+                            player.score += 10;
+                        }
+                        hit = true;
+                        break;
+                    }
+                }
+                if (hit) continue;
+                if (b.userData.life <= 0 || Math.abs(b.position.x) > 35 || Math.abs(b.position.z) > 35 || b.position.y < -2 || b.position.y > 20) {
+                    scene.remove(b);
+                    playerBullets.splice(i, 1);
+                }
+            }
+
+            // NPC bullet hits player
+            for (let i = npcBullets.length - 1; i >= 0; i--) {
+                const b = npcBullets[i];
+                if (!player.dead && b.position.distanceTo(player.pos) < 0.8) {
+                    const dmg = 15 + Math.floor(Math.random() * 10);
+                    player.health = Math.max(0, player.health - dmg);
+                    hitFlash.style.background = 'rgba(255,0,0,0.5)';
+                    setTimeout(() => hitFlash.style.background = 'transparent', 200);
+                    scene.remove(b);
+                    npcBullets.splice(i, 1);
+                    if (player.health <= 0) {
+                        player.dead = true;
+                        showQuiz();
+                    }
+                    continue;
+                }
+                if (b.userData.life <= 0 || Math.abs(b.position.x) > 35 || Math.abs(b.position.z) > 35 || b.position.y < -2 || b.position.y > 20) {
+                    scene.remove(b);
+                    npcBullets.splice(i, 1);
+                }
+            }
+
+            // UI
+            healthFill.style.width = (player.health / player.maxHealth * 100) + '%';
+            healthLabel.textContent = 'HP ' + Math.round(player.health);
+            scoreDisplay.textContent = '🎯 ' + player.score;
+
+            // Spawn NPCs
+            if (npcs.filter(n => n.alive).length < 5 && Math.random() < 0.01) {
+                const angle = Math.random() * Math.PI * 2;
+                spawnNPC(Math.cos(angle) * 20, Math.sin(angle) * 20);
+            }
+        }
+
         function animate() {
             requestAnimationFrame(animate);
             const dt = Math.min(clock.getDelta(), 0.1);
