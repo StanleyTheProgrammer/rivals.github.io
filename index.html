@@ -199,7 +199,7 @@
             scene.add(group);
             npcs.push({
                 mesh: group,
-                health: 3,
+                health: 100,
                 alive: true,
                 shootTimer: 1 + Math.random() * 2,
                 shootDelay: 1.5,
@@ -525,7 +525,7 @@
                     // Headshot detection (smaller hitbox for head)
                     if (distToHead < 0.4) {
                         // HEADSHOT - 5 damage
-                        const damage = 5;
+                        const damage = 15;
                         npc.health -= damage;
                         spawnHitParticles(npcHeadPos, '#ff3333');
                         showDamagePopup(npcHeadPos, damage, true);
@@ -541,7 +541,7 @@
                         break;
                     } else if (distToBody < 0.9) {
                         // BODY SHOT - 1 damage
-                        const damage = 1;
+                        const damage = 12;
                         npc.health -= damage;
                         spawnHitParticles(npcBodyPos, '#ffdd44');
                         showDamagePopup(npcBodyPos, damage, false);
