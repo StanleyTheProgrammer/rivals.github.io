@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>3D Shooter – English Quiz</title>
     <style>
-        * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; }
+        * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
         body { background:#000; overflow:hidden; touch-action:manipulation; font-family:Arial,sans-serif; position:fixed; width:100vw; height:100dvh; }
         #gameCanvas { display:block; width:100%; height:100%; }
         #ui-layer { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:10; }
@@ -18,20 +18,58 @@
         #crosshair::before { width:2px; height:24px; left:50%; top:50%; transform:translate(-50%,-50%); }
         #crosshair::after { width:24px; height:2px; left:50%; top:50%; transform:translate(-50%,-50%); }
         #crosshair-dot { position:absolute; width:6px; height:6px; background:red; border-radius:50%; top:50%; left:50%; transform:translate(-50%,-50%); }
-        #joystick-zone { position:absolute; bottom:40px; bottom:calc(40px + env(safe-area-inset-bottom,20px)); left:30px; width:140px; height:140px; pointer-events:auto; z-index:20; }
+        #joystick-zone { position:absolute; bottom:40px; bottom:calc(40px + env(safe-area-inset-bottom,20px)); left:30px; width:140px; height:140px; pointer-events:auto; z-index:20; touch-action:none; }
         #joystick-base { width:120px; height:120px; border-radius:50%; background:rgba(255,255,255,0.15); border:3px solid rgba(255,255,255,0.4); position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); }
         #joystick-thumb { width:55px; height:55px; border-radius:50%; background:rgba(255,255,255,0.8); position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); box-shadow:0 0 15px black; }
-        #shoot-button { position:absolute; bottom:50px; bottom:calc(50px + env(safe-area-inset-bottom,20px)); right:30px; width:90px; height:90px; border-radius:50%; background:radial-gradient(circle at 30% 30%, #ff5555, #aa0000); border:3px solid white; pointer-events:auto; z-index:20; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; font-size:18px; }
+        #shoot-button { position:absolute; bottom:50px; bottom:calc(50px + env(safe-area-inset-bottom,20px)); right:30px; width:90px; height:90px; border-radius:50%; background:radial-gradient(circle at 30% 30%, #ff5555, #aa0000); border:3px solid white; pointer-events:auto; z-index:20; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; font-size:18px; touch-action:manipulation; }
         #hit-flash { position:absolute; top:0; left:0; width:100%; height:100%; background:transparent; pointer-events:none; z-index:8; transition:background 0.1s; }
+        
+        /* QUIZ OVERLAY - Fixed for iPad input */
         #quiz-overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); display:none; align-items:center; justify-content:center; z-index:100; pointer-events:auto; backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px); }
         #quiz-overlay.active { display:flex; }
-        #quiz-card { background:linear-gradient(145deg, rgba(26,26,46,0.95), rgba(22,33,62,0.95)); border:3px solid #e94560; border-radius:20px; padding:30px; max-width:500px; width:90%; text-align:center; color:white; box-shadow:0 20px 60px rgba(233,68,96,0.6); }
+        #quiz-card { background:linear-gradient(145deg, rgba(26,26,46,0.98), rgba(22,33,62,0.98)); border:3px solid #e94560; border-radius:20px; padding:30px; max-width:500px; width:90%; text-align:center; color:white; box-shadow:0 20px 60px rgba(233,68,96,0.6); }
         #quiz-title { font-size:24px; font-weight:bold; margin-bottom:5px; color:#ff6b6b; }
         #quiz-progress { font-size:14px; color:#ffdd00; margin-bottom:15px; }
         #quiz-question { font-size:18px; margin:15px 0; font-weight:bold; }
-        #quiz-input { width:100%; padding:15px; font-size:18px; border-radius:10px; border:2px solid rgba(255,255,255,0.4); background:rgba(255,255,255,0.1); color:white; text-align:center; margin:10px 0; outline:none; }
-        #quiz-input:focus { border-color:#e94560; }
-        #quiz-submit { width:100%; padding:15px; font-size:18px; border-radius:10px; border:none; background:#e94560; color:white; font-weight:bold; cursor:pointer; margin-top:10px; }
+        
+        /* IMPORTANT: Input styling for iPad */
+        #quiz-input { 
+            width:100%; 
+            padding:15px; 
+            font-size:18px; 
+            border-radius:10px; 
+            border:2px solid rgba(255,255,255,0.6); 
+            background:rgba(255,255,255,0.15); 
+            color:white; 
+            text-align:center; 
+            margin:10px 0; 
+            outline:none; 
+            -webkit-appearance:none;
+            appearance:none;
+            user-select:text;
+            -webkit-user-select:text;
+            pointer-events:auto;
+        }
+        #quiz-input:focus { 
+            border-color:#e94560; 
+            background:rgba(255,255,255,0.25);
+        }
+        #quiz-submit { 
+            width:100%; 
+            padding:15px; 
+            font-size:18px; 
+            border-radius:10px; 
+            border:none; 
+            background:#e94560; 
+            color:white; 
+            font-weight:bold; 
+            cursor:pointer; 
+            margin-top:10px; 
+            -webkit-appearance:none;
+            appearance:none;
+            pointer-events:auto;
+        }
+        #quiz-submit:active { background:#cc3355; }
         #quiz-feedback { font-size:14px; margin-top:10px; min-height:20px; }
         #loading-screen { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:white; font-size:24px; z-index:200; pointer-events:none; }
         .damage-popup { position:absolute; color:#ffdd00; font-weight:bold; font-size:24px; pointer-events:none; z-index:50; text-shadow:0 0 10px rgba(255,200,0,0.8); animation:floatUp 1s ease-out forwards; }
@@ -54,7 +92,7 @@
                 <div id="quiz-title">💀 YOU DIED</div>
                 <div id="quiz-progress">Answer questions to respawn (0/3)</div>
                 <div id="quiz-question"></div>
-                <input type="text" id="quiz-input" placeholder="Type your answer..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+                <input type="text" id="quiz-input" placeholder="Tap here to type answer..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
                 <button id="quiz-submit">Submit Answer</button>
                 <div id="quiz-feedback"></div>
             </div>
@@ -78,20 +116,15 @@
                     fetch('questions.json')
                 ]);
                 
-                if (!statsResponse.ok) throw new Error('Failed to load stats.json');
-                if (!questionsResponse.ok) throw new Error('Failed to load questions.json');
-                
                 GAME_STATS = await statsResponse.json();
                 QUESTIONS_DATA = await questionsResponse.json();
                 
-                console.log('✅ Stats loaded:', GAME_STATS);
-                console.log('✅ Questions loaded:', QUESTIONS_DATA.questions.length + ' questions');
-                
+                console.log('✅ Data loaded');
                 document.getElementById('loading-screen').style.display = 'none';
                 startGame();
             } catch (error) {
-                console.error('❌ Error loading JSON files:', error);
-                document.getElementById('loading-screen').textContent = 'Error loading data. Check console.';
+                console.error('❌ Error:', error);
+                document.getElementById('loading-screen').textContent = 'Error loading data.';
             }
         }
 
@@ -117,7 +150,6 @@
         let correctCount = 0, currentQuestion = null, usedQuestions = [];
         let player, clock;
 
-        // ==================== SHOW DAMAGE POPUP ====================
         function showDamagePopup(worldPos, damage, isHeadshot = false) {
             const vector = worldPos.clone().project(camera);
             const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
@@ -127,454 +159,158 @@
             popup.textContent = isHeadshot ? `💀 ${damage}` : `-${damage}`;
             popup.style.left = x + 'px';
             popup.style.top = y + 'px';
-            if (isHeadshot) {
-                popup.style.color = '#ff3333';
-                popup.style.fontSize = '32px';
-                popup.style.textShadow = '0 0 15px rgba(255,0,0,0.9)';
-            }
+            if (isHeadshot) { popup.style.color = '#ff3333'; popup.style.fontSize = '32px'; }
             uiLayer.appendChild(popup);
             setTimeout(() => { if (popup.parentNode) popup.parentNode.removeChild(popup); }, 1000);
         }
 
-        // ==================== START GAME ====================
         function startGame() {
             const stats = GAME_STATS;
-            
-            // Initialize Three.js
             renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.shadowMap.enabled = true;
-            
             scene = new THREE.Scene();
             scene.background = new THREE.Color('#87CEEB');
             scene.fog = new THREE.Fog('#87CEEB', 25, 70);
-            
             camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.2, 80);
             camera.position.set(0, 1.7, 0);
             scene.add(camera);
 
             scene.add(new THREE.AmbientLight('#ffffff', 0.6));
             const sun = new THREE.DirectionalLight('#ffffff', 1.8);
-            sun.position.set(15, 25, 10);
-            sun.castShadow = true;
-            sun.shadow.mapSize.set(1024, 1024);
-            scene.add(sun);
+            sun.position.set(15, 25, 10); sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024); scene.add(sun);
 
-            const ground = new THREE.Mesh(
-                new THREE.PlaneGeometry(60, 60),
-                new THREE.MeshStandardMaterial({ color: '#4a8c3f', roughness: 0.9 })
-            );
-            ground.rotation.x = -Math.PI / 2;
-            ground.receiveShadow = true;
-            scene.add(ground);
+            const ground = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({ color: '#4a8c3f', roughness: 0.9 }));
+            ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
 
-            // Create buildings from stats
-            const buildingData = [
-                [-10,-10,3,5,3,'#b0a89c'],[10,-8,4,6,2.5,'#c4b9a8'],[-8,8,2.5,4,4,'#a89880'],
-                [9,9,3.5,7,3.5,'#bfb09a'],[-13,2,2,3.5,5,'#d4c8b0'],[13,-4,5,5,2,'#9e8e78'],
-                [0,-15,6,3,3,'#c8bca5'],[3,14,3,6,4,'#a09080'],[-6,-17,3.5,3.5,3.5,'#c0b098'],
-                [7,-14,2.5,6,2.5,'#a89878']
-            ];
-            
             function addBuilding(x, z, w, h, d, color) {
                 const geo = new THREE.BoxGeometry(w, h, d);
                 const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.7 });
                 const mesh = new THREE.Mesh(geo, mat);
-                mesh.position.set(x, h / 2, z);
-                mesh.castShadow = mesh.receiveShadow = true;
-                mesh.userData = { type: 'building', x, z, w, h, d };
-                scene.add(mesh);
-                buildings.push(mesh);
+                mesh.position.set(x, h / 2, z); mesh.castShadow = mesh.receiveShadow = true;
+                mesh.userData = { type: 'building', x, z, w, h, d }; scene.add(mesh); buildings.push(mesh);
             }
-            buildingData.forEach(d => addBuilding(...d));
+            [[-10,-10,3,5,3,'#b0a89c'],[10,-8,4,6,2.5,'#c4b9a8'],[-8,8,2.5,4,4,'#a89880'],[9,9,3.5,7,3.5,'#bfb09a'],[-13,2,2,3.5,5,'#d4c8b0'],[13,-4,5,5,2,'#9e8e78'],[0,-15,6,3,3,'#c8bca5'],[3,14,3,6,4,'#a09080'],[-6,-17,3.5,3.5,3.5,'#c0b098'],[7,-14,2.5,6,2.5,'#a89878']].forEach(d => addBuilding(...d));
 
-            // Create player from stats
             player = {
                 pos: new THREE.Vector3(0, 1.7, 0),
-                health: stats.player.health,
-                maxHealth: stats.player.maxHealth,
-                score: 0,
-                dead: false,
-                yaw: 0, pitch: 0,
-                shootCooldown: 0,
-                shootDelay: stats.player.shootDelay,
-                radius: stats.player.radius,
-                moveSpeed: stats.player.moveSpeed,
+                health: stats.player.health, maxHealth: stats.player.maxHealth,
+                score: 0, dead: false, yaw: 0, pitch: 0,
+                shootCooldown: 0, shootDelay: stats.player.shootDelay,
+                radius: stats.player.radius, moveSpeed: stats.player.moveSpeed,
             };
 
-            const gun = new THREE.Mesh(
-                new THREE.BoxGeometry(0.1, 0.1, 0.5),
-                new THREE.MeshStandardMaterial({ color: '#333', metalness: 0.8 })
-            );
-            gun.position.set(0.2, -0.2, -0.5);
-            camera.add(gun);
+            const gun = new THREE.Mesh(new THREE.BoxGeometry(0.1,0.1,0.5), new THREE.MeshStandardMaterial({ color:'#333', metalness:0.8 }));
+            gun.position.set(0.2,-0.2,-0.5); camera.add(gun);
 
-            // Spawn NPCs from stats
             function spawnNPC(x, z) {
                 const group = new THREE.Group();
-                group.add(new THREE.Mesh(
-                    new THREE.CapsuleGeometry(0.35, 0.9),
-                    new THREE.MeshStandardMaterial({ color: '#aa3333', roughness: 0.5 })
-                ));
-                const head = new THREE.Mesh(
-                    new THREE.SphereGeometry(0.3),
-                    new THREE.MeshStandardMaterial({ color: '#e8c8a0' })
-                );
-                head.position.y = 1.9;
-                head.name = 'head';
-                group.add(head);
-                group.position.set(x, 0, z);
-                scene.add(group);
-                npcs.push({
-                    mesh: group,
-                    health: stats.npc.health,
-                    alive: true,
-                    shootTimer: 1 + Math.random() * 2,
-                    shootDelay: stats.npc.shootDelay,
-                    speed: stats.npc.speed,
-                });
+                group.add(new THREE.Mesh(new THREE.CapsuleGeometry(0.35,0.9), new THREE.MeshStandardMaterial({ color:'#aa3333', roughness:0.5 })));
+                const head = new THREE.Mesh(new THREE.SphereGeometry(0.3), new THREE.MeshStandardMaterial({ color:'#e8c8a0' }));
+                head.position.y=1.9; group.add(head);
+                group.position.set(x,0,z); scene.add(group);
+                npcs.push({ mesh:group, health:stats.npc.health, alive:true, shootTimer:1+Math.random()*2, shootDelay:stats.npc.shootDelay, speed:stats.npc.speed });
             }
-            
-            for (let i = 0; i < stats.game.npcCount; i++) {
-                const angle = Math.random() * Math.PI * 2;
-                spawnNPC(Math.cos(angle) * stats.game.spawnDistance, Math.sin(angle) * stats.game.spawnDistance);
-            }
+            for(let i=0;i<stats.game.npcCount;i++){ const a=Math.random()*Math.PI*2; spawnNPC(Math.cos(a)*stats.game.spawnDistance, Math.sin(a)*stats.game.spawnDistance); }
 
-            // Helper functions
             function spawnHitParticles(position, color) {
-                for (let i = 0; i < 8; i++) {
-                    const particle = new THREE.Mesh(
-                        new THREE.SphereGeometry(0.04, 4, 4),
-                        new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 1 })
-                    );
-                    particle.position.copy(position);
-                    particle.userData = {
-                        vel: new THREE.Vector3((Math.random()-0.5)*4, Math.random()*3+1, (Math.random()-0.5)*4),
-                        life: 0.5
-                    };
-                    scene.add(particle);
-                    const remove = () => {
-                        particle.userData.life -= 0.016;
-                        particle.material.opacity = particle.userData.life / 0.5;
-                        particle.position.add(particle.userData.vel.clone().multiplyScalar(0.016));
-                        if (particle.userData.life <= 0) { scene.remove(particle); return; }
-                        requestAnimationFrame(remove);
-                    };
-                    remove();
+                for(let i=0;i<8;i++){
+                    const p=new THREE.Mesh(new THREE.SphereGeometry(0.04), new THREE.MeshBasicMaterial({color,transparent:true,opacity:1}));
+                    p.position.copy(position); p.userData={vel:new THREE.Vector3((Math.random()-0.5)*4,Math.random()*3+1,(Math.random()-0.5)*4),life:0.5}; scene.add(p);
+                    const r=()=>{p.userData.life-=0.016;p.material.opacity=p.userData.life/0.5;p.position.add(p.userData.vel.clone().multiplyScalar(0.016));if(p.userData.life<=0){scene.remove(p);return;}requestAnimationFrame(r);};r();
                 }
             }
 
             function createBullet(origin, dir, speed, color, owner) {
-                const bullet = new THREE.Mesh(
-                    new THREE.SphereGeometry(0.08, 6, 6),
-                    new THREE.MeshBasicMaterial({ color })
-                );
-                bullet.position.copy(origin);
-                bullet.userData = { vel: dir.clone().normalize().multiplyScalar(speed), life: 2.5, owner };
-                scene.add(bullet);
-                if (owner === 'player') playerBullets.push(bullet);
-                else npcBullets.push(bullet);
-                return bullet;
+                const b=new THREE.Mesh(new THREE.SphereGeometry(0.08),new THREE.MeshBasicMaterial({color}));
+                b.position.copy(origin); b.userData={vel:dir.clone().normalize().multiplyScalar(speed),life:2.5,owner}; scene.add(b);
+                if(owner==='player')playerBullets.push(b);else npcBullets.push(b); return b;
             }
 
-            function playerShoot() {
-                if (player.dead || player.shootCooldown > 0) return;
-                player.shootCooldown = player.shootDelay;
-                const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-                createBullet(
-                    player.pos.clone().add(dir.clone().multiplyScalar(0.6)),
-                    dir,
-                    stats.player.bulletSpeed,
-                    '#ffdd44',
-                    'player'
-                );
+            function playerShoot(){ if(player.dead||player.shootCooldown>0)return; player.shootCooldown=player.shootDelay; const d=new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion); createBullet(player.pos.clone().add(d.clone().multiplyScalar(0.6)),d,stats.player.bulletSpeed,'#ffdd44','player'); }
+
+            function resolveCollision(pos,radius){ for(const b of buildings){ const d=b.userData; const hw=d.w/2,hd=d.d/2; const cx=Math.max(d.x-hw,Math.min(pos.x,d.x+hw)),cz=Math.max(d.z-hd,Math.min(pos.z,d.z+hd)); const dx=pos.x-cx,dz=pos.z-cz,dist=Math.sqrt(dx*dx+dz*dz); if(dist<radius&&dist>0.001&&pos.y<d.h+0.5){const o=radius-dist;pos.x+=(dx/dist)*o;pos.z+=(dz/dist)*o;}}}
+
+            function npcShoot(npc){ const o=npc.mesh.position.clone();o.y+=1.5; let d=player.pos.clone().sub(o).normalize(); d.x+=(Math.random()-0.5)*0.15;d.y+=(Math.random()-0.5)*0.15;d.z+=(Math.random()-0.5)*0.15;d.normalize(); createBullet(o,d,stats.npc.bulletSpeed,'#ff4444','npc'); }
+
+            function getRandomQuestion(){ const qs=QUESTIONS_DATA.questions; let avail=qs.filter(q=>!usedQuestions.includes(q)); if(avail.length===0){usedQuestions=[];avail=qs;} const q=avail[Math.floor(Math.random()*avail.length)]; usedQuestions.push(q); return q; }
+
+            function showQuiz(){ quizOverlay.classList.add('active'); correctCount=0; updateQuizProgress(); loadNewQuestion(); setTimeout(()=>{ quizInput.focus(); }, 300); }
+
+            function loadNewQuestion(){ currentQuestion=getRandomQuestion(); quizQuestion.textContent=currentQuestion.q; quizInput.value=''; quizFeedback.textContent=''; quizInput.style.borderColor='rgba(255,255,255,0.6)'; setTimeout(()=>{ quizInput.focus(); }, 200); }
+
+            function updateQuizProgress(){ quizProgress.textContent=`Answer questions to respawn (${correctCount}/${stats.quiz.requiredCorrect})`; }
+
+            function checkAnswer(){
+                const userAnswer=quizInput.value.trim().toLowerCase();
+                const correctAnswer=currentQuestion.answer.toLowerCase();
+                if(userAnswer===correctAnswer){
+                    correctCount++; quizFeedback.textContent='✅ Correct!'; quizFeedback.style.color='#00ff66'; quizInput.style.borderColor='#00ff66'; updateQuizProgress();
+                    if(correctCount>=stats.quiz.requiredCorrect){ setTimeout(()=>{ player.health=player.maxHealth; player.dead=false; player.pos.set(0,1.7,0); quizOverlay.classList.remove('active'); quizInput.value=''; correctCount=0; },800); }
+                    else { setTimeout(()=>loadNewQuestion(),800); }
+                } else { quizFeedback.textContent='❌ Wrong answer. Try again!'; quizFeedback.style.color='#ff4444'; quizInput.style.borderColor='#ff4444'; quizInput.value=''; setTimeout(()=>{ quizInput.focus(); },200); }
             }
 
-            function resolveCollision(pos, radius) {
-                for (const b of buildings) {
-                    const d = b.userData;
-                    const hw = d.w/2, hd = d.d/2;
-                    const cx = Math.max(d.x - hw, Math.min(pos.x, d.x + hw));
-                    const cz = Math.max(d.z - hd, Math.min(pos.z, d.z + hd));
-                    const dx = pos.x - cx, dz = pos.z - cz;
-                    const dist = Math.sqrt(dx*dx + dz*dz);
-                    if (dist < radius && dist > 0.001 && pos.y < d.h + 0.5) {
-                        const o = radius - dist;
-                        pos.x += (dx/dist) * o;
-                        pos.z += (dz/dist) * o;
-                    }
-                }
-            }
+            // Touch events for quiz
+            quizSubmit.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); checkAnswer(); });
+            quizSubmit.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); checkAnswer(); });
+            
+            quizInput.addEventListener('touchstart', (e) => { e.stopPropagation(); });
+            quizInput.addEventListener('keydown', (e) => { if(e.key==='Enter'){ e.preventDefault(); checkAnswer(); } });
 
-            function npcShoot(npc) {
-                const origin = npc.mesh.position.clone();
-                origin.y += 1.5;
-                let dir = player.pos.clone().sub(origin).normalize();
-                dir.x += (Math.random()-0.5)*0.15;
-                dir.y += (Math.random()-0.5)*0.15;
-                dir.z += (Math.random()-0.5)*0.15;
-                dir.normalize();
-                createBullet(origin, dir, stats.npc.bulletSpeed, '#ff4444', 'npc');
-            }
-
-            // Quiz functions
-            function getRandomQuestion() {
-                const questions = QUESTIONS_DATA.questions;
-                let available = questions.filter(q => !usedQuestions.includes(q));
-                if (available.length === 0) { usedQuestions = []; available = questions; }
-                const q = available[Math.floor(Math.random() * available.length)];
-                usedQuestions.push(q);
-                return q;
-            }
-
-            function showQuiz() {
-                quizOverlay.classList.add('active');
-                correctCount = 0;
-                updateQuizProgress();
-                loadNewQuestion();
-                quizInput.focus();
-            }
-
-            function loadNewQuestion() {
-                currentQuestion = getRandomQuestion();
-                quizQuestion.textContent = currentQuestion.q;
-                quizInput.value = '';
-                quizFeedback.textContent = '';
-                quizInput.style.borderColor = 'rgba(255,255,255,0.4)';
-                setTimeout(() => quizInput.focus(), 100);
-            }
-
-            function updateQuizProgress() {
-                quizProgress.textContent = `Answer questions to respawn (${correctCount}/${stats.quiz.requiredCorrect})`;
-            }
-
-            function checkAnswer() {
-                const userAnswer = quizInput.value.trim().toLowerCase();
-                const correctAnswer = currentQuestion.answer.toLowerCase();
-                
-                if (userAnswer === correctAnswer) {
-                    correctCount++;
-                    quizFeedback.textContent = '✅ Correct!';
-                    quizFeedback.style.color = '#00ff66';
-                    quizInput.style.borderColor = '#00ff66';
-                    updateQuizProgress();
-                    
-                    if (correctCount >= stats.quiz.requiredCorrect) {
-                        setTimeout(() => {
-                            player.health = player.maxHealth;
-                            player.dead = false;
-                            player.pos.set(0, 1.7, 0);
-                            quizOverlay.classList.remove('active');
-                            quizInput.value = '';
-                            correctCount = 0;
-                        }, 800);
-                    } else {
-                        setTimeout(() => loadNewQuestion(), 800);
-                    }
-                } else {
-                    quizFeedback.textContent = '❌ Wrong answer. Try again!';
-                    quizFeedback.style.color = '#ff4444';
-                    quizInput.style.borderColor = '#ff4444';
-                    quizInput.value = '';
-                    setTimeout(() => quizInput.focus(), 100);
-                }
-            }
-
-            quizSubmit.addEventListener('click', checkAnswer);
-            quizInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') checkAnswer(); });
+            // Prevent game controls when quiz is active
+            quizOverlay.addEventListener('touchstart', (e) => { e.stopPropagation(); });
+            quizOverlay.addEventListener('touchmove', (e) => { e.stopPropagation(); });
 
             // Controls
-            let joyMoveX = 0, joyMoveY = 0, joyActive = false, joyId = null, joyBase = {x:0,y:0};
-            joystickZone.addEventListener('touchstart', (e) => {
-                const t = e.changedTouches[0]; joyActive = true; joyId = t.identifier;
-                const r = joystickZone.getBoundingClientRect();
-                joyBase.x = r.left + r.width/2; joyBase.y = r.top + r.height/2;
-                e.preventDefault();
-            });
-            joystickZone.addEventListener('touchmove', (e) => {
-                if (!joyActive) return;
-                for (const t of e.changedTouches) {
-                    if (t.identifier === joyId) {
-                        let dx = t.clientX - joyBase.x, dy = t.clientY - joyBase.y;
-                        const dist = Math.sqrt(dx*dx + dy*dy), max = 50;
-                        if (dist > max) { dx = (dx/dist)*max; dy = (dy/dist)*max; }
-                        joyMoveX = dx/max; joyMoveY = dy/max;
-                        joystickThumb.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-                    }
-                }
-                e.preventDefault();
-            });
-            joystickZone.addEventListener('touchend', (e) => {
-                for (const t of e.changedTouches) {
-                    if (t.identifier === joyId) { joyActive = false; joyMoveX = 0; joyMoveY = 0; joystickThumb.style.transform = 'translate(-50%, -50%)'; }
-                }
-            });
-            shootBtn.addEventListener('touchstart', (e) => { playerShoot(); e.preventDefault(); });
+            let joyMoveX=0,joyMoveY=0,joyActive=false,joyId=null,joyBase={x:0,y:0};
+            joystickZone.addEventListener('touchstart',(e)=>{ if(player.dead)return; const t=e.changedTouches[0]; joyActive=true; joyId=t.identifier; const r=joystickZone.getBoundingClientRect(); joyBase.x=r.left+r.width/2;joyBase.y=r.top+r.height/2; e.preventDefault();e.stopPropagation(); });
+            joystickZone.addEventListener('touchmove',(e)=>{ if(!joyActive||player.dead)return; for(const t of e.changedTouches){ if(t.identifier===joyId){ let dx=t.clientX-joyBase.x,dy=t.clientY-joyBase.y; const dist=Math.sqrt(dx*dx+dy*dy),max=50; if(dist>max){dx=(dx/dist)*max;dy=(dy/dist)*max;} joyMoveX=dx/max;joyMoveY=dy/max; joystickThumb.style.transform=`translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`; } } e.preventDefault();e.stopPropagation(); });
+            joystickZone.addEventListener('touchend',(e)=>{ for(const t of e.changedTouches){ if(t.identifier===joyId){ joyActive=false;joyMoveX=0;joyMoveY=0;joystickThumb.style.transform='translate(-50%,-50%)'; } } });
+            shootBtn.addEventListener('touchstart',(e)=>{ if(!player.dead){ playerShoot(); } e.preventDefault();e.stopPropagation(); });
 
-            let lookActive = false, lookId = null, prevLook = {x:0,y:0};
-            document.addEventListener('touchstart', (e) => {
-                for (const t of e.changedTouches) {
-                    if (t.clientX > window.innerWidth/2 && t.target !== shootBtn && !t.target.closest('#joystick-zone') && !t.target.closest('#quiz-overlay')) {
-                        lookActive = true; lookId = t.identifier;
-                        prevLook.x = t.clientX; prevLook.y = t.clientY;
-                    }
-                }
-            }, {passive:false});
-            document.addEventListener('touchmove', (e) => {
-                if (!lookActive) return;
-                for (const t of e.changedTouches) {
-                    if (t.identifier === lookId) {
-                        const dx = t.clientX - prevLook.x, dy = t.clientY - prevLook.y;
-                        player.yaw -= dx * 0.003; player.pitch -= dy * 0.003;
-                        player.pitch = Math.max(-1.2, Math.min(1.2, player.pitch));
-                        prevLook.x = t.clientX; prevLook.y = t.clientY;
-                    }
-                }
-                e.preventDefault();
-            }, {passive:false});
-            document.addEventListener('touchend', (e) => {
-                for (const t of e.changedTouches) { if (t.identifier === lookId) lookActive = false; }
-            });
+            let lookActive=false,lookId=null,prevLook={x:0,y:0};
+            document.addEventListener('touchstart',(e)=>{ if(quizOverlay.classList.contains('active'))return; for(const t of e.changedTouches){ if(t.clientX>window.innerWidth/2&&t.target!==shootBtn&&!t.target.closest('#joystick-zone')){ lookActive=true;lookId=t.identifier;prevLook.x=t.clientX;prevLook.y=t.clientY; } } },{passive:false});
+            document.addEventListener('touchmove',(e)=>{ if(!lookActive||quizOverlay.classList.contains('active'))return; for(const t of e.changedTouches){ if(t.identifier===lookId){ const dx=t.clientX-prevLook.x,dy=t.clientY-prevLook.y; player.yaw-=dx*0.003;player.pitch-=dy*0.003;player.pitch=Math.max(-1.2,Math.min(1.2,player.pitch));prevLook.x=t.clientX;prevLook.y=t.clientY; } } e.preventDefault(); },{passive:false});
+            document.addEventListener('touchend',(e)=>{ for(const t of e.changedTouches){ if(t.identifier===lookId)lookActive=false; } });
 
-            const keys = {};
-            window.addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; e.preventDefault(); });
-            window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; e.preventDefault(); });
-            window.addEventListener('mousedown', e => { if (e.button === 0 && !e.target.closest('#quiz-overlay')) playerShoot(); });
+            const keys={};
+            window.addEventListener('keydown',e=>{ if(quizOverlay.classList.contains('active')&&e.key==='Enter')return; keys[e.key.toLowerCase()]=true; e.preventDefault(); });
+            window.addEventListener('keyup',e=>{ keys[e.key.toLowerCase()]=false; e.preventDefault(); });
+            window.addEventListener('mousedown',e=>{ if(e.button===0&&!e.target.closest('#quiz-overlay'))playerShoot(); });
 
-            // Game loop
-            clock = new THREE.Clock();
-            function update(dt) {
-                const s = stats;
-                
-                for (const npc of npcs) {
-                    if (!npc.alive) continue;
-                    const toPlayer = new THREE.Vector3().copy(player.pos).sub(npc.mesh.position);
-                    const dist = toPlayer.length();
-                    
-                    if (dist < s.game.detectionRange && dist > 1.2 && !player.dead) {
-                        const moveDir = toPlayer.clone(); moveDir.y = 0;
-                        if (moveDir.lengthSq() > 0.001) {
-                            moveDir.normalize();
-                            const newPos = npc.mesh.position.clone().add(moveDir.multiplyScalar(npc.speed * dt));
-                            resolveCollision(newPos, s.npc.radius);
-                            npc.mesh.position.copy(newPos);
-                        }
-                        npc.mesh.lookAt(player.pos.x, 0, player.pos.z);
-                    }
-                    
-                    if (dist < s.game.attackRange && !player.dead) {
-                        npc.shootTimer -= dt;
-                        if (npc.shootTimer <= 0) { npc.shootTimer = npc.shootDelay; npcShoot(npc); }
-                    }
+            clock=new THREE.Clock();
+            function update(dt){
+                const s=stats;
+                for(const npc of npcs){
+                    if(!npc.alive)continue;
+                    const toPlayer=new THREE.Vector3().copy(player.pos).sub(npc.mesh.position);const dist=toPlayer.length();
+                    if(dist<s.game.detectionRange&&dist>1.2&&!player.dead){ const md=toPlayer.clone();md.y=0; if(md.lengthSq()>0.001){ md.normalize(); const np=npc.mesh.position.clone().add(md.multiplyScalar(npc.speed*dt)); resolveCollision(np,s.npc.radius); npc.mesh.position.copy(np); } npc.mesh.lookAt(player.pos.x,0,player.pos.z); }
+                    if(dist<s.game.attackRange&&!player.dead){ npc.shootTimer-=dt; if(npc.shootTimer<=0){npc.shootTimer=npc.shootDelay;npcShoot(npc);} }
                 }
-
-                for (const arr of [playerBullets, npcBullets]) {
-                    for (const b of arr) { b.position.add(b.userData.vel.clone().multiplyScalar(dt)); b.userData.life -= dt; }
+                for(const arr of[playerBullets,npcBullets]){ for(const b of arr){ b.position.add(b.userData.vel.clone().multiplyScalar(dt));b.userData.life-=dt; } }
+                if(!player.dead){
+                    let mx=joyMoveX,mz=joyMoveY;
+                    if(keys['w']||keys['arrowup'])mz=-1;if(keys['s']||keys['arrowdown'])mz=1;if(keys['a']||keys['arrowleft'])mx=-1;if(keys['d']||keys['arrowright'])mx=1;
+                    const mag=Math.sqrt(mx*mx+mz*mz);if(mag>1){mx/=mag;mz/=mag;}
+                    const forward=new THREE.Vector3(-Math.sin(player.yaw),0,-Math.cos(player.yaw));const right=new THREE.Vector3(Math.cos(player.yaw),0,-Math.sin(player.yaw));
+                    const mv=forward.multiplyScalar(-mz).add(right.multiplyScalar(mx));
+                    if(mv.lengthSq()>0){mv.normalize().multiplyScalar(player.moveSpeed*dt);const np=player.pos.clone().add(mv);resolveCollision(np,player.radius);player.pos.copy(np);}
+                    player.pos.y=1.7;camera.position.copy(player.pos);camera.rotation.order='YXZ';camera.rotation.y=player.yaw;camera.rotation.x=player.pitch;
+                    if(player.shootCooldown>0)player.shootCooldown-=dt;
                 }
-
-                if (!player.dead) {
-                    let mx = joyMoveX, mz = joyMoveY;
-                    if (keys['w'] || keys['arrowup']) mz = -1;
-                    if (keys['s'] || keys['arrowdown']) mz = 1;
-                    if (keys['a'] || keys['arrowleft']) mx = -1;
-                    if (keys['d'] || keys['arrowright']) mx = 1;
-                    const mag = Math.sqrt(mx*mx + mz*mz);
-                    if (mag > 1) { mx /= mag; mz /= mag; }
-                    
-                    const forward = new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
-                    const right = new THREE.Vector3(Math.cos(player.yaw), 0, -Math.sin(player.yaw));
-                    const moveVec = forward.multiplyScalar(-mz).add(right.multiplyScalar(mx));
-                    if (moveVec.lengthSq() > 0) {
-                        moveVec.normalize().multiplyScalar(player.moveSpeed * dt);
-                        const np = player.pos.clone().add(moveVec);
-                        resolveCollision(np, player.radius);
-                        player.pos.copy(np);
-                    }
-                    player.pos.y = 1.7;
-                    camera.position.copy(player.pos);
-                    camera.rotation.order = 'YXZ';
-                    camera.rotation.y = player.yaw;
-                    camera.rotation.x = player.pitch;
-                    if (player.shootCooldown > 0) player.shootCooldown -= dt;
-                }
-
-                // Player bullets hit NPCs
-                for (let i = playerBullets.length - 1; i >= 0; i--) {
-                    const b = playerBullets[i]; let hit = false;
-                    for (const npc of npcs) {
-                        if (!npc.alive) continue;
-                        const headPos = npc.mesh.position.clone(); headPos.y += 1.9;
-                        const bodyPos = npc.mesh.position.clone(); bodyPos.y += 1.0;
-                        
-                        if (b.position.distanceTo(headPos) < 0.4) {
-                            npc.health -= s.npc.headDamage;
-                            spawnHitParticles(headPos, '#ff3333');
-                            showDamagePopup(headPos, s.npc.headDamage, true);
-                            scene.remove(b); playerBullets.splice(i, 1);
-                            if (npc.health <= 0) { npc.alive = false; scene.remove(npc.mesh); player.score += s.npc.headScore; }
-                            hit = true; break;
-                        } else if (b.position.distanceTo(bodyPos) < 0.9) {
-                            npc.health -= s.npc.bodyDamage;
-                            spawnHitParticles(bodyPos, '#ffdd44');
-                            showDamagePopup(bodyPos, s.npc.bodyDamage, false);
-                            scene.remove(b); playerBullets.splice(i, 1);
-                            if (npc.health <= 0) { npc.alive = false; scene.remove(npc.mesh); player.score += s.npc.bodyScore; }
-                            hit = true; break;
-                        }
-                    }
-                    if (hit) continue;
-                    if (b.userData.life <= 0 || Math.abs(b.position.x) > s.game.worldSize || Math.abs(b.position.z) > s.game.worldSize || b.position.y < -2 || b.position.y > 20) {
-                        scene.remove(b); playerBullets.splice(i, 1);
-                    }
-                }
-
-                // NPC bullets hit player
-                for (let i = npcBullets.length - 1; i >= 0; i--) {
-                    const b = npcBullets[i];
-                    if (!player.dead && b.position.distanceTo(player.pos) < 0.8) {
-                        const dmg = s.npc.damageToPlayer + Math.floor(Math.random() * 10);
-                        player.health = Math.max(0, player.health - dmg);
-                        hitFlash.style.background = 'rgba(255,0,0,0.5)';
-                        setTimeout(() => hitFlash.style.background = 'transparent', 200);
-                        scene.remove(b); npcBullets.splice(i, 1);
-                        if (player.health <= 0) { player.dead = true; showQuiz(); }
-                        continue;
-                    }
-                    if (b.userData.life <= 0 || Math.abs(b.position.x) > s.game.worldSize || Math.abs(b.position.z) > s.game.worldSize || b.position.y < -2 || b.position.y > 20) {
-                        scene.remove(b); npcBullets.splice(i, 1);
-                    }
-                }
-
-                healthFill.style.width = (player.health / player.maxHealth * 100) + '%';
-                healthLabel.textContent = 'HP ' + Math.round(player.health);
-                scoreDisplay.textContent = 'Score: ' + player.score;
-
-                if (npcs.filter(n => n.alive).length < s.game.npcCount && Math.random() < 0.01) {
-                    const angle = Math.random() * Math.PI * 2;
-                    spawnNPC(Math.cos(angle) * s.game.spawnDistance, Math.sin(angle) * s.game.spawnDistance);
-                }
+                for(let i=playerBullets.length-1;i>=0;i--){ const b=playerBullets[i];let hit=false; for(const npc of npcs){ if(!npc.alive)continue; const hp=npc.mesh.position.clone();hp.y+=1.9;const bp=npc.mesh.position.clone();bp.y+=1.0; if(b.position.distanceTo(hp)<0.4){ npc.health-=s.npc.headDamage;spawnHitParticles(hp,'#ff3333');showDamagePopup(hp,s.npc.headDamage,true);scene.remove(b);playerBullets.splice(i,1); if(npc.health<=0){npc.alive=false;scene.remove(npc.mesh);player.score+=s.npc.headScore;} hit=true;break; } else if(b.position.distanceTo(bp)<0.9){ npc.health-=s.npc.bodyDamage;spawnHitParticles(bp,'#ffdd44');showDamagePopup(bp,s.npc.bodyDamage,false);scene.remove(b);playerBullets.splice(i,1); if(npc.health<=0){npc.alive=false;scene.remove(npc.mesh);player.score+=s.npc.bodyScore;} hit=true;break; } } if(hit)continue; if(b.userData.life<=0||Math.abs(b.position.x)>s.game.worldSize||Math.abs(b.position.z)>s.game.worldSize||b.position.y<-2||b.position.y>20){scene.remove(b);playerBullets.splice(i,1);} }
+                for(let i=npcBullets.length-1;i>=0;i--){ const b=npcBullets[i]; if(!player.dead&&b.position.distanceTo(player.pos)<0.8){ const dmg=s.npc.damageToPlayer+Math.floor(Math.random()*10);player.health=Math.max(0,player.health-dmg);hitFlash.style.background='rgba(255,0,0,0.5)';setTimeout(()=>hitFlash.style.background='transparent',200);scene.remove(b);npcBullets.splice(i,1); if(player.health<=0){player.dead=true;showQuiz();} continue; } if(b.userData.life<=0||Math.abs(b.position.x)>s.game.worldSize||Math.abs(b.position.z)>s.game.worldSize||b.position.y<-2||b.position.y>20){scene.remove(b);npcBullets.splice(i,1);} }
+                healthFill.style.width=(player.health/player.maxHealth*100)+'%';healthLabel.textContent='HP '+Math.round(player.health);scoreDisplay.textContent='Score: '+player.score;
+                if(npcs.filter(n=>n.alive).length<s.game.npcCount&&Math.random()<0.01){const a=Math.random()*Math.PI*2;spawnNPC(Math.cos(a)*s.game.spawnDistance,Math.sin(a)*s.game.spawnDistance);}
             }
-
-            function animate() {
-                requestAnimationFrame(animate);
-                const dt = Math.min(clock.getDelta(), 0.1);
-                update(dt);
-                renderer.render(scene, camera);
-            }
+            function animate(){ requestAnimationFrame(animate); const dt=Math.min(clock.getDelta(),0.1); update(dt); renderer.render(scene,camera); }
             animate();
         }
 
-        // ==================== START ====================
         loadJSONFiles();
-
-        window.addEventListener('resize', () => {
-            if (renderer && camera) {
-                renderer.setSize(window.innerWidth, window.innerHeight);
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-            }
-        });
+        window.addEventListener('resize',()=>{ if(renderer&&camera){ renderer.setSize(window.innerWidth,window.innerHeight); camera.aspect=window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); } });
     </script>
 </body>
 </html>
