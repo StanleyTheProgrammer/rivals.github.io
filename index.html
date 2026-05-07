@@ -24,16 +24,35 @@
         #shoot-button { position:absolute; bottom:50px; bottom:calc(50px + env(safe-area-inset-bottom,20px)); right:30px; width:90px; height:90px; border-radius:50%; background:radial-gradient(circle at 30% 30%, #ff5555, #aa0000); border:3px solid white; pointer-events:auto; z-index:20; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; font-size:18px; }
         #hit-flash { position:absolute; top:0; left:0; width:100%; height:100%; background:transparent; pointer-events:none; z-index:8; transition:background 0.1s; }
         
-        /* QUIZ OVERLAY */
-        #quiz-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); display:none; align-items:center; justify-content:center; z-index:999; }
+        /* QUIZ OVERLAY - now uses dialog-like approach for iOS */
+        #quiz-overlay { 
+            position:fixed; 
+            top:0; left:0; 
+            width:100%; height:100%; 
+            background:rgba(0,0,0,0.6); 
+            display:none; 
+            align-items:center; 
+            justify-content:center; 
+            z-index:9999;
+        }
         #quiz-overlay.active { display:flex; }
-        #quiz-card { background:#1a1a2e; border:3px solid #e94560; border-radius:20px; padding:25px; max-width:450px; width:90%; text-align:center; color:white; }
+        #quiz-card { 
+            background:#1a1a2e; 
+            border:3px solid #e94560; 
+            border-radius:20px; 
+            padding:25px; 
+            max-width:450px; 
+            width:90%; 
+            text-align:center; 
+            color:white; 
+        }
         #quiz-title { font-size:22px; font-weight:bold; margin-bottom:5px; color:#ff6b6b; }
         #quiz-progress { font-size:13px; color:#ffdd00; margin-bottom:12px; }
         #quiz-question { font-size:17px; margin:12px 0; font-weight:bold; line-height:1.4; }
         
-        /* FIX: Use contenteditable div instead of input */
-        #quiz-input-wrapper {
+        /* CRITICAL FIX: Use a form element to force iOS keyboard to work */
+        #quiz-form { margin:0; padding:0; }
+        #quiz-input { 
             display:block;
             width:100%;
             padding:14px;
@@ -45,20 +64,27 @@
             text-align:center;
             margin:10px 0;
             outline:none;
-            min-height:50px;
-            cursor:text;
-            -webkit-user-select:text;
-            user-select:text;
+            -webkit-appearance:textfield;
+            appearance:textfield;
         }
-        #quiz-input-wrapper:empty::before {
-            content:"Type your answer here";
-            color:#999;
-        }
-        #quiz-input-wrapper:focus {
-            border-color:#e94560;
-        }
+        #quiz-input:focus { border-color:#e94560; }
+        #quiz-input::placeholder { color:#999; }
         
-        #quiz-submit { display:block; width:100%; padding:14px; font-size:18px; border-radius:10px; border:none; background:#e94560; color:white; font-weight:bold; cursor:pointer; margin-top:10px; }
+        #quiz-submit { 
+            display:block; 
+            width:100%; 
+            padding:14px; 
+            font-size:18px; 
+            border-radius:10px; 
+            border:none; 
+            background:#e94560; 
+            color:white; 
+            font-weight:bold; 
+            cursor:pointer; 
+            margin-top:10px; 
+            -webkit-appearance:none;
+            appearance:none;
+        }
         #quiz-submit:active { background:#cc3355; }
         #quiz-feedback { font-size:14px; margin-top:8px; min-height:20px; }
         #loading-screen { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:white; font-size:24px; z-index:200; }
@@ -79,12 +105,16 @@
         <div id="loading-screen">Loading data...</div>
     </div>
     
+    <!-- Quiz overlay placed AFTER canvas and ui-layer -->
     <div id="quiz-overlay">
         <div id="quiz-card">
             <div id="quiz-title">💀 YOU DIED</div>
             <div id="quiz-progress">Answer questions to respawn (0/3)</div>
             <div id="quiz-question"></div>
-            <div id="quiz-input-wrapper" contenteditable="true" enterkeyhint="done"></div>
+            <!-- WRAP INPUT IN A FORM to help iOS recognize it -->
+            <form id="quiz-form" onsubmit="return false;" autocomplete="off">
+                <input type="text" id="quiz-input" placeholder="Type your answer here" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done">
+            </form>
             <button id="quiz-submit">Submit Answer</button>
             <div id="quiz-feedback"></div>
         </div>
@@ -131,7 +161,8 @@
         const uiLayer = document.getElementById('ui-layer');
         const quizOverlay = document.getElementById('quiz-overlay');
         const quizQuestion = document.getElementById('quiz-question');
-        const quizInputWrapper = document.getElementById('quiz-input-wrapper');
+        const quizInput = document.getElementById('quiz-input');
+        const quizForm = document.getElementById('quiz-form');
         const quizSubmit = document.getElementById('quiz-submit');
         const quizFeedback = document.getElementById('quiz-feedback');
         const quizProgress = document.getElementById('quiz-progress');
@@ -232,27 +263,27 @@
                 correctCount=0; 
                 updateQuizProgress(); 
                 loadNewQuestion(); 
+                // Force focus on iPad using setTimeout
                 setTimeout(() => { 
-                    quizInputWrapper.focus();
-                }, 500); 
+                    quizInput.focus();
+                }, 600); 
             }
 
             function loadNewQuestion(){ 
                 currentQuestion=getRandomQuestion(); 
                 quizQuestion.textContent=currentQuestion.q; 
-                quizInputWrapper.textContent = '';
-                quizInputWrapper.innerHTML = '';
+                quizInput.value = '';
                 quizFeedback.textContent=''; 
-                quizInputWrapper.style.borderColor='#fff';
+                quizInput.style.borderColor='#fff';
                 setTimeout(() => { 
-                    quizInputWrapper.focus();
-                }, 300); 
+                    quizInput.focus();
+                }, 400); 
             }
 
             function updateQuizProgress(){ quizProgress.textContent=`Answer questions to respawn (${correctCount}/${stats.quiz.requiredCorrect})`; }
 
             function checkAnswer(){
-                const userAnswer = quizInputWrapper.textContent.trim().toLowerCase();
+                const userAnswer = quizInput.value.trim().toLowerCase();
                 const correctAnswer = currentQuestion.answer.toLowerCase();
                 
                 if(userAnswer === correctAnswer){
@@ -266,10 +297,9 @@
                             player.dead = false; 
                             player.pos.set(0, 1.7, 0); 
                             quizOverlay.classList.remove('active'); 
-                            quizInputWrapper.textContent = '';
-                            quizInputWrapper.innerHTML = '';
+                            quizInput.value = '';
                             correctCount = 0;
-                            quizInputWrapper.blur();
+                            quizInput.blur();
                         }, 800); 
                     } else { 
                         setTimeout(() => loadNewQuestion(), 800); 
@@ -277,15 +307,20 @@
                 } else { 
                     quizFeedback.textContent = '❌ Wrong answer. Try again!'; 
                     quizFeedback.style.color = '#ff4444'; 
-                    quizInputWrapper.textContent = '';
-                    quizInputWrapper.innerHTML = '';
+                    quizInput.value = '';
                     setTimeout(() => { 
-                        quizInputWrapper.focus();
+                        quizInput.focus();
                     }, 200); 
                 }
             }
 
-            // Quiz submit
+            // Prevent form submission
+            quizForm.addEventListener('submit', (e) => { 
+                e.preventDefault(); 
+                checkAnswer(); 
+            });
+
+            // Quiz submit button
             quizSubmit.addEventListener('touchstart', (e) => { 
                 e.preventDefault(); 
                 e.stopPropagation();
@@ -296,18 +331,18 @@
                 checkAnswer(); 
             });
             
-            // Handle Enter key on the contenteditable div
-            quizInputWrapper.addEventListener('keydown', (e) => { 
+            // Handle Enter key
+            quizInput.addEventListener('keydown', (e) => { 
                 if(e.key === 'Enter'){ 
                     e.preventDefault(); 
                     checkAnswer(); 
                 } 
             });
 
-            // Prevent game touch events when tapping the quiz input
-            quizInputWrapper.addEventListener('touchstart', (e) => { 
+            // Prevent game touch events on quiz
+            quizInput.addEventListener('touchstart', (e) => { 
                 e.stopPropagation(); 
-                quizInputWrapper.focus();
+                // Don't preventDefault here - let iOS handle the touch
             });
 
             // Controls
