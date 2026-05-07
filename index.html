@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
     <title>3D Shooter – English Quiz</title>
     <style>
-        * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-        body { background:#000; overflow:hidden; font-family:Arial,sans-serif; position:fixed; width:100vw; height:100dvh; }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { background:#000; overflow:hidden; font-family:Arial,sans-serif; position:fixed; width:100vw; height:100dvh; -webkit-overflow-scrolling:touch; }
         #gameCanvas { display:block; width:100%; height:100%; position:absolute; top:0; left:0; }
         #ui-layer { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:10; }
         #health-bar-container { position:absolute; top:20px; left:20px; right:20px; height:18px; background:rgba(0,0,0,0.6); border-radius:10px; overflow:hidden; border:2px solid rgba(255,255,255,0.5); }
@@ -24,67 +24,38 @@
         #shoot-button { position:absolute; bottom:50px; bottom:calc(50px + env(safe-area-inset-bottom,20px)); right:30px; width:90px; height:90px; border-radius:50%; background:radial-gradient(circle at 30% 30%, #ff5555, #aa0000); border:3px solid white; pointer-events:auto; z-index:20; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; font-size:18px; }
         #hit-flash { position:absolute; top:0; left:0; width:100%; height:100%; background:transparent; pointer-events:none; z-index:8; transition:background 0.1s; }
         
-        /* QUIZ OVERLAY - now uses dialog-like approach for iOS */
-        #quiz-overlay { 
-            position:fixed; 
-            top:0; left:0; 
-            width:100%; height:100%; 
-            background:rgba(0,0,0,0.6); 
-            display:none; 
-            align-items:center; 
-            justify-content:center; 
-            z-index:9999;
-        }
+        #quiz-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); display:none; align-items:center; justify-content:center; z-index:9999; }
         #quiz-overlay.active { display:flex; }
-        #quiz-card { 
-            background:#1a1a2e; 
-            border:3px solid #e94560; 
-            border-radius:20px; 
-            padding:25px; 
-            max-width:450px; 
-            width:90%; 
-            text-align:center; 
-            color:white; 
-        }
+        #quiz-card { background:#1a1a2e; border:3px solid #e94560; border-radius:20px; padding:25px; max-width:450px; width:90%; text-align:center; color:white; position:relative; }
         #quiz-title { font-size:22px; font-weight:bold; margin-bottom:5px; color:#ff6b6b; }
         #quiz-progress { font-size:13px; color:#ffdd00; margin-bottom:12px; }
         #quiz-question { font-size:17px; margin:12px 0; font-weight:bold; line-height:1.4; }
         
-        /* CRITICAL FIX: Use a form element to force iOS keyboard to work */
-        #quiz-form { margin:0; padding:0; }
+        /* IMPORTANT: Input styling that works with iOS */
         #quiz-input { 
             display:block;
             width:100%;
             padding:14px;
-            font-size:18px;
+            font-size:18px !important;
             border-radius:10px;
             border:2px solid #fff;
-            background:#fff;
-            color:#000;
+            background:#ffffff !important;
+            color:#000000 !important;
             text-align:center;
             margin:10px 0;
             outline:none;
-            -webkit-appearance:textfield;
-            appearance:textfield;
+            -webkit-appearance:textfield !important;
+            appearance:textfield !important;
+            -webkit-user-select:text !important;
+            user-select:text !important;
+            opacity:1 !important;
+            visibility:visible !important;
+            pointer-events:auto !important;
         }
         #quiz-input:focus { border-color:#e94560; }
         #quiz-input::placeholder { color:#999; }
         
-        #quiz-submit { 
-            display:block; 
-            width:100%; 
-            padding:14px; 
-            font-size:18px; 
-            border-radius:10px; 
-            border:none; 
-            background:#e94560; 
-            color:white; 
-            font-weight:bold; 
-            cursor:pointer; 
-            margin-top:10px; 
-            -webkit-appearance:none;
-            appearance:none;
-        }
+        #quiz-submit { display:block; width:100%; padding:14px; font-size:18px; border-radius:10px; border:none; background:#e94560; color:white; font-weight:bold; cursor:pointer; margin-top:10px; }
         #quiz-submit:active { background:#cc3355; }
         #quiz-feedback { font-size:14px; margin-top:8px; min-height:20px; }
         #loading-screen { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:white; font-size:24px; z-index:200; }
@@ -105,16 +76,12 @@
         <div id="loading-screen">Loading data...</div>
     </div>
     
-    <!-- Quiz overlay placed AFTER canvas and ui-layer -->
     <div id="quiz-overlay">
         <div id="quiz-card">
             <div id="quiz-title">💀 YOU DIED</div>
             <div id="quiz-progress">Answer questions to respawn (0/3)</div>
             <div id="quiz-question"></div>
-            <!-- WRAP INPUT IN A FORM to help iOS recognize it -->
-            <form id="quiz-form" onsubmit="return false;" autocomplete="off">
-                <input type="text" id="quiz-input" placeholder="Type your answer here" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done">
-            </form>
+            <input type="text" id="quiz-input" placeholder="Type your answer here" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done">
             <button id="quiz-submit">Submit Answer</button>
             <div id="quiz-feedback"></div>
         </div>
@@ -126,7 +93,6 @@
     <script type="module">
         import * as THREE from 'three';
 
-        // ==================== LOAD JSON FILES ====================
         let GAME_STATS = null;
         let QUESTIONS_DATA = null;
 
@@ -136,20 +102,15 @@
                     fetch('stats.json'),
                     fetch('questions.json')
                 ]);
-                
                 GAME_STATS = await statsResponse.json();
                 QUESTIONS_DATA = await questionsResponse.json();
-                
-                console.log('✅ Data loaded');
                 document.getElementById('loading-screen').style.display = 'none';
                 startGame();
             } catch (error) {
-                console.error('❌ Error:', error);
                 document.getElementById('loading-screen').textContent = 'Error loading data.';
             }
         }
 
-        // ==================== GAME VARIABLES ====================
         const canvas = document.getElementById('gameCanvas');
         const healthFill = document.getElementById('health-bar-fill');
         const healthLabel = document.getElementById('health-label');
@@ -162,7 +123,6 @@
         const quizOverlay = document.getElementById('quiz-overlay');
         const quizQuestion = document.getElementById('quiz-question');
         const quizInput = document.getElementById('quiz-input');
-        const quizForm = document.getElementById('quiz-form');
         const quizSubmit = document.getElementById('quiz-submit');
         const quizFeedback = document.getElementById('quiz-feedback');
         const quizProgress = document.getElementById('quiz-progress');
@@ -258,15 +218,30 @@
 
             function getRandomQuestion(){ const qs=QUESTIONS_DATA.questions; let avail=qs.filter(q=>!usedQuestions.includes(q)); if(avail.length===0){usedQuestions=[];avail=qs;} const q=avail[Math.floor(Math.random()*avail.length)]; usedQuestions.push(q); return q; }
 
+            // SPECIAL IOS FOCUS FUNCTION
+            function focusQuizInput() {
+                quizInput.focus();
+                // Force a click event to "wake up" iOS keyboard
+                const clickEvent = new MouseEvent('click', {
+                    view: window,
+                    bubbles: true,
+                    cancelable: true
+                });
+                quizInput.dispatchEvent(clickEvent);
+                // Also try setSelectionRange to activate the input
+                if (quizInput.value.length > 0) {
+                    quizInput.setSelectionRange(quizInput.value.length, quizInput.value.length);
+                }
+            }
+
             function showQuiz(){ 
                 quizOverlay.classList.add('active'); 
                 correctCount=0; 
                 updateQuizProgress(); 
                 loadNewQuestion(); 
-                // Force focus on iPad using setTimeout
                 setTimeout(() => { 
-                    quizInput.focus();
-                }, 600); 
+                    focusQuizInput();
+                }, 500); 
             }
 
             function loadNewQuestion(){ 
@@ -276,8 +251,8 @@
                 quizFeedback.textContent=''; 
                 quizInput.style.borderColor='#fff';
                 setTimeout(() => { 
-                    quizInput.focus();
-                }, 400); 
+                    focusQuizInput();
+                }, 300); 
             }
 
             function updateQuizProgress(){ quizProgress.textContent=`Answer questions to respawn (${correctCount}/${stats.quiz.requiredCorrect})`; }
@@ -309,18 +284,12 @@
                     quizFeedback.style.color = '#ff4444'; 
                     quizInput.value = '';
                     setTimeout(() => { 
-                        quizInput.focus();
+                        focusQuizInput();
                     }, 200); 
                 }
             }
 
-            // Prevent form submission
-            quizForm.addEventListener('submit', (e) => { 
-                e.preventDefault(); 
-                checkAnswer(); 
-            });
-
-            // Quiz submit button
+            // Submit handlers
             quizSubmit.addEventListener('touchstart', (e) => { 
                 e.preventDefault(); 
                 e.stopPropagation();
@@ -331,7 +300,6 @@
                 checkAnswer(); 
             });
             
-            // Handle Enter key
             quizInput.addEventListener('keydown', (e) => { 
                 if(e.key === 'Enter'){ 
                     e.preventDefault(); 
@@ -339,10 +307,15 @@
                 } 
             });
 
-            // Prevent game touch events on quiz
+            // CRITICAL: Don't prevent default on input touchstart
             quizInput.addEventListener('touchstart', (e) => { 
-                e.stopPropagation(); 
-                // Don't preventDefault here - let iOS handle the touch
+                e.stopPropagation();
+                // DO NOT call e.preventDefault() - this was blocking the keyboard!
+            });
+
+            // Also handle input events to verify typing works
+            quizInput.addEventListener('input', (e) => {
+                console.log('Input value:', quizInput.value);
             });
 
             // Controls
