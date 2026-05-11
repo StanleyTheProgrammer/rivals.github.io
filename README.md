@@ -1,5 +1,5 @@
-** RIVALS **
+#RIVALS
 
-** MADE BY STANLEY **
+**MADE BY STANLEY**
 
-** CREDIT TO @x_cool_cat_x ON DISCORD! **
+**CREDIT TO @x_cool_cat_x ON DISCORD!**
