@@ -273,8 +273,8 @@
             try {
                 // Load JSON files from your structure
                 const [s, q] = await Promise.all([
-                    fetch('jsons/stats.json'),
-                    fetch('jsons/questions.json')
+                    fetch('scripts/jsons/stats.json'),
+                    fetch('scripts/jsons/questions.json')
                 ]);
                 STATS = await s.json();
                 QUESTIONS = await q.json();
