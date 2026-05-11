@@ -273,8 +273,8 @@
             try {
                 // Load JSON files from your structure
                 const [s, q] = await Promise.all([
-                    fetch('../jsons/stats.json'),
-                    fetch('../jsons/questions.json')
+                    fetch('jsons/stats.json'),
+                    fetch('jsons/questions.json')
                 ]);
                 STATS = await s.json();
                 QUESTIONS = await q.json();
@@ -282,7 +282,7 @@
                 // Load NPC texture
                 const textureLoader = new THREE.TextureLoader();
                 npcTexture = await new Promise((resolve) => {
-                    textureLoader.load('../../images/homeless.jpeg', resolve, undefined, () => {
+                    textureLoader.load('images/homeless.jpeg', resolve, undefined, () => {
                         // Fallback - create a colored texture if image fails
                         console.warn('Failed to load homeless.jpeg, using fallback');
                         resolve(null);
