@@ -1,0 +1,34 @@
+{
+  "player": {
+    "health": 250,
+    "maxHealth": 250,
+    "moveSpeed": 5.5,
+    "shootDelay": 0.15,
+    "radius": 0.4,
+    "bulletSpeed": 80
+  },
+  "npc": {
+    "health": 70,
+    "speed": 2.2,
+    "shootDelay": 1.5,
+    "bulletSpeed": 20,
+    "radius": 0.45,
+    "headDamage": 15,
+    "bodyDamage": 12,
+    "headScore": 20,
+    "bodyScore": 10,
+    "damageToPlayer": 15
+  },
+  "quiz": {
+    "requiredCorrect": 3,
+    "maxQuestions": 50
+  },
+  "game": {
+    "npcCount": 6,
+    "spawnDistance": 20,
+    "detectionRange": 18,
+    "attackRange": 14,
+    "worldSize": 35,
+    "buildingCount": 10
+  }
+}
