@@ -1,4 +1,4 @@
-#RIVALS
+**RIVALS**
 
 **MADE BY STANLEY**
 
