@@ -225,8 +225,11 @@
             margin-top: 10px;
         }
         #quiz-submit:active { background: #cc3355; }
+        #quiz-submit:disabled { background: #666; cursor: not-allowed; }
+        
         #quiz-feedback { font-size:14px; margin-top:10px; min-height:20px; }
         #loading-screen { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:white; font-size:24px; z-index:200; }
+        #api-status { position:absolute; top:60px; right:10px; color:#ffdd00; font-size:10px; z-index:200; pointer-events:none; }
         .damage-popup { position:absolute; color:#ffdd00; font-weight:bold; font-size:24px; pointer-events:none; z-index:50; text-shadow:0 0 10px rgba(255,200,0,0.8); animation:floatUp 1s ease-out forwards; }
         @keyframes floatUp { 0% { opacity:1; transform:translateY(0); } 100% { opacity:0; transform:translateY(-60px); } }
     </style>
@@ -246,6 +249,7 @@
         <div id="shoot-button">FIRE</div>
         <div id="hit-flash"></div>
         <div id="loading-screen">Loading data...</div>
+        <div id="api-status"></div>
     </div>
 
     <div id="quiz-overlay">
@@ -265,13 +269,28 @@
     <script type="module">
         import * as THREE from 'three';
 
+        // ========== DEEPSEEK API CONFIG ==========
+        // Replace this with your actual DeepSeek API key
+        const DEEPSEEK_API_KEY = 'sk-YOUR-DEEPSEEK-API-KEY-HERE';
+        const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
+        let deepseekEnabled = false;
+
+        // Check if API key is set
+        if (DEEPSEEK_API_KEY && DEEPSEEK_API_KEY !== 'sk-YOUR-DEEPSEEK-API-KEY-HERE') {
+            deepseekEnabled = true;
+            document.getElementById('api-status').textContent = '🔗 DeepSeek AI Enabled';
+            document.getElementById('api-status').style.color = '#00ff66';
+        } else {
+            document.getElementById('api-status').textContent = '⚠️ DeepSeek API key not set - using local checking';
+            document.getElementById('api-status').style.color = '#ffdd00';
+        }
+
         // ========== LOAD DATA ==========
         let STATS, QUESTIONS;
         let npcTexture = null;
         
         async function loadData() {
             try {
-                // Load JSON files from your structure
                 const [s, q] = await Promise.all([
                     fetch('scripts/jsons/stats.json'),
                     fetch('scripts/jsons/questions.json')
@@ -279,11 +298,9 @@
                 STATS = await s.json();
                 QUESTIONS = await q.json();
                 
-                // Load NPC texture
                 const textureLoader = new THREE.TextureLoader();
                 npcTexture = await new Promise((resolve) => {
                     textureLoader.load('images/homeless.jpeg', resolve, undefined, () => {
-                        // Fallback - create a colored texture if image fails
                         console.warn('Failed to load homeless.jpeg, using fallback');
                         resolve(null);
                     });
@@ -313,12 +330,84 @@
         const quizFeedback = document.getElementById('quiz-feedback');
         const quizProgress = document.getElementById('quiz-progress');
         const uiLayer = document.getElementById('ui-layer');
+        const apiStatusDiv = document.getElementById('api-status');
 
         // ========== GAME STATE ==========
         let scene, camera, renderer, clock;
         let buildings = [], npcs = [], playerBullets = [], npcBullets = [];
         let player;
         let correctCount = 0, currentQuestion = null, usedQuestions = [];
+
+        // ========== DEEPSEEK API CALL ==========
+        async function checkAnswerWithDeepSeek(question, userAnswer, localAnswer) {
+            if (!deepseekEnabled) {
+                // Fall back to local checking
+                const isCorrect = userAnswer === localAnswer;
+                return { correct: isCorrect, explanation: isCorrect ? 'Correct!' : 'Incorrect. Try again.' };
+            }
+
+            const prompt = `You are a strict English grammar evaluator for Primary 5 Hong Kong students. Evaluate the student's answer with precision, considering grammar, spelling, and punctuation.
+
+QUESTION: "${question}"
+CORRECT ANSWER (for reference): "${localAnswer}"
+STUDENT'S ANSWER: "${userAnswer}"
+
+Rules:
+1. The answer must match exactly in meaning AND grammar
+2. Check for correct spelling (including common Hong Kong student spelling errors)
+3. Check for proper verb tense, subject-verb agreement, and word order
+4. Capitalization and extra spaces should be ignored
+5. If the student's answer is semantically and grammatically correct, mark it CORRECT even if it differs slightly from the reference answer
+6. Be strict but fair
+
+Respond ONLY in this JSON format:
+{
+  "correct": true/false,
+  "explanation": "Brief explanation of why it's correct or what the student did wrong"
+}`;
+
+            try {
+                const response = await fetch(DEEPSEEK_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        model: 'deepseek-chat',
+                        messages: [
+                            { role: 'system', content: 'You are a strict English grammar evaluator for Hong Kong Primary 5 students. You evaluate answers with professional precision.' },
+                            { role: 'user', content: prompt }
+                        ],
+                        temperature: 0.1,
+                        max_tokens: 300
+                    })
+                });
+
+                const data = await response.json();
+                const reply = data.choices[0].message.content;
+                
+                // Parse the JSON response
+                try {
+                    // Clean the response (remove markdown code blocks if present)
+                    const cleanReply = reply.replace(/```json|```/g, '').trim();
+                    const result = JSON.parse(cleanReply);
+                    return { correct: result.correct, explanation: result.explanation };
+                } catch (parseError) {
+                    console.warn('Failed to parse DeepSeek response:', reply);
+                    // Fall back to local checking
+                    const isCorrect = userAnswer === localAnswer;
+                    return { correct: isCorrect, explanation: isCorrect ? 'Correct!' : 'Incorrect. Try again.' };
+                }
+            } catch (error) {
+                console.error('DeepSeek API error:', error);
+                // Fall back to local checking
+                const isCorrect = userAnswer === localAnswer;
+                apiStatusDiv.textContent = '⚠️ API error - using local check';
+                apiStatusDiv.style.color = '#ffdd00';
+                return { correct: isCorrect, explanation: isCorrect ? 'Correct!' : 'Incorrect. Try again.' };
+            }
+        }
 
         // ========== QUIZ FUNCTIONS ==========
         function showQuiz() {
@@ -344,6 +433,8 @@
             quizQuestion.textContent = currentQuestion.q;
             quizInput.value = '';
             quizFeedback.textContent = '';
+            quizSubmitBtn.disabled = false;
+            quizSubmitBtn.textContent = 'Submit Answer';
             setTimeout(() => quizInput.focus(), 300);
         }
 
@@ -351,13 +442,28 @@
             quizProgress.textContent = `Answer questions to respawn (${correctCount}/${STATS.quiz.requiredCorrect})`;
         }
 
-        function submitAnswer() {
-            const answer = quizInput.value.trim().toLowerCase();
-            const correct = currentQuestion.answer.toLowerCase();
+        async function submitAnswer() {
+            const answer = quizInput.value.trim();
+            if (!answer) return;
             
-            if (answer === correct) {
+            // Disable submit button while checking
+            quizSubmitBtn.disabled = true;
+            quizSubmitBtn.textContent = 'Checking with AI...';
+            quizFeedback.textContent = '🤔 DeepSeek is evaluating your answer...';
+            quizFeedback.style.color = '#ffdd00';
+
+            const localCorrectAnswer = currentQuestion.answer.toLowerCase();
+            const userAnswerLower = answer.toLowerCase();
+
+            const result = await checkAnswerWithDeepSeek(
+                currentQuestion.q,
+                userAnswerLower,
+                localCorrectAnswer
+            );
+
+            if (result.correct) {
                 correctCount++;
-                quizFeedback.textContent = '✅ Correct!';
+                quizFeedback.textContent = `✅ ${result.explanation}`;
                 quizFeedback.style.color = '#00ff66';
                 updateQuizProgress();
                 
@@ -368,15 +474,17 @@
                         player.pos.set(0, 1.7, 0);
                         hideQuiz();
                         correctCount = 0;
-                    }, 800);
+                    }, 1200);
                 } else {
-                    setTimeout(pickQuestion, 800);
+                    setTimeout(pickQuestion, 1200);
                 }
             } else {
-                quizFeedback.textContent = '❌ Wrong answer. Try again!';
+                quizFeedback.textContent = `❌ ${result.explanation}`;
                 quizFeedback.style.color = '#ff4444';
                 quizInput.value = '';
-                setTimeout(() => quizInput.focus(), 200);
+                quizSubmitBtn.disabled = false;
+                quizSubmitBtn.textContent = 'Submit Answer';
+                setTimeout(() => quizInput.focus(), 300);
             }
         }
 
@@ -480,28 +588,17 @@
         function spawnNPC(x, z) {
             const group = new THREE.Group();
             
-            // Body
             const bodyGeo = new THREE.CapsuleGeometry(0.35, 0.9);
-            const bodyMat = new THREE.MeshStandardMaterial({ 
-                color: '#aa3333', 
-                roughness: 0.5,
-            });
+            const bodyMat = new THREE.MeshStandardMaterial({ color: '#aa3333', roughness: 0.5 });
             const body = new THREE.Mesh(bodyGeo, bodyMat);
             group.add(body);
             
-            // Head with homeless.jpeg texture if loaded
             const headGeo = new THREE.SphereGeometry(0.3);
             let headMat;
             if (npcTexture) {
-                headMat = new THREE.MeshStandardMaterial({ 
-                    map: npcTexture,
-                    roughness: 0.8,
-                });
+                headMat = new THREE.MeshStandardMaterial({ map: npcTexture, roughness: 0.8 });
             } else {
-                headMat = new THREE.MeshStandardMaterial({ 
-                    color: '#e8c8a0',
-                    roughness: 0.8,
-                });
+                headMat = new THREE.MeshStandardMaterial({ color: '#e8c8a0', roughness: 0.8 });
             }
             const head = new THREE.Mesh(headGeo, headMat);
             head.position.y = 1.9;
